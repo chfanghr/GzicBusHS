@@ -3,21 +3,8 @@ name:               GzicBusHS
 version:            0.1.0.0
 license:            MIT
 copyright:          2022 Connor Fang
-maintainer:         srid@srid.ca
+maintainer:         chfanghr@gmail.com
 author:             Connor Fang
-category:           Web
-homepage:           https://srid.ca/GzicBusHS
-
--- TODO: Before hackage release.
--- A short (one-line) description of the package.
-synopsis:           A template for Haskell projects using Nix
-
--- A longer description of the package.
--- description:
-
--- A URL where users can report bugs.
--- bug-reports:
-
 extra-source-files:
   LICENSE
   README.md
@@ -53,16 +40,32 @@ common shared
     , directory
     , filepath
     , mtl
-    , optics-core
+    , optics
     , profunctors
     , relude        >=1.0
     , shower
-    , time
     , with-utf8
 
-  hs-source-dirs:     src
   default-language:   GHC2021
 
+library
+  import:          shared
+  hs-source-dirs:  src
+  exposed-modules: GzicBusHS.AuthSession
+  build-depends:
+    , base16
+    , crypton
+    , extra
+    , http-client
+    , http-client-tls
+    , http-types
+    , network-uri
+    , raw-strings-qq
+    , regex-tdfa
+    , text
+    , time
+
 executable GzicBusHS
-  import:  shared
-  main-is: Main.hs
+  import:         shared
+  main-is:        Main.hs
+  hs-source-dirs: bin
