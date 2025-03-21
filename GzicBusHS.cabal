@@ -24,9 +24,12 @@ common shared
     DataKinds
     DerivingStrategies
     DerivingVia
+    DuplicateRecordFields
     LambdaCase
     MultiWayIf
+    NoFieldSelectors
     NoStarIsType
+    OverloadedLabels
     OverloadedStrings
     StrictData
     TypeFamilies
