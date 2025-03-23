@@ -54,7 +54,13 @@ common shared
 library
   import:          shared
   hs-source-dirs:  src
-  exposed-modules: GzicBusHS.AuthSession
+  exposed-modules:
+    GzicBusHS.Auth.Errors
+    GzicBusHS.Auth.PasswordLogin
+    GzicBusHS.Auth.Session
+    GzicBusHS.Auth.Token
+    GzicBusHS.Auth.Utils
+
   build-depends:
     , base16
     , crypton
@@ -62,6 +68,7 @@ library
     , http-client
     , http-client-tls
     , http-types
+    , monad-logger
     , network-uri
     , raw-strings-qq
     , regex-tdfa
