@@ -12,7 +12,7 @@ import Control.Monad.Extra (whileM)
 import Control.Monad.Logger (logDebugN)
 import Data.Aeson qualified as A
 import Data.Aeson.Key qualified as A
-import Data.Aeson.Text (encodeToLazyText)
+import Data.Aeson.Text qualified as A
 import Data.Aeson.Types qualified as A
 import Data.Base16.Types (extractBase16)
 import Data.ByteString.Base16 (encodeBase16)
@@ -178,7 +178,7 @@ login retrieveTwoFactorAuthenticationCode username password = do
 
           loginBody = encodeLoginReqBody loginParams
 
-      logDebugN $ "login body: " <> toStrict (encodeToLazyText loginBody)
+      logDebugN $ "login body: " <> toStrict (A.encodeToLazyText loginBody)
 
       resp :: Text <-
         fmap
