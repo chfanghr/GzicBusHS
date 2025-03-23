@@ -7,7 +7,7 @@ module GzicBusHS.AuthSession (
   AuthSessionError (..),
   LoginError (..),
   RetrieveTokenError (..),
-  LoginIdExtractionError (..),
+  LoginTokenExtractionError (..),
   AuthSessionEnv,
   newAuthSessionEnv,
   AuthSessionState,
@@ -89,7 +89,7 @@ withGenericHttpClientError _ e = e
 
 data LoginError
   = FailToLoadLoginPage SomeException
-  | FailToExtractLoginId LoginIdExtractionError
+  | FailToExtractLoginToken LoginTokenExtractionError
   | FailToSendLoginRequest SomeException
   | FailToCheckLoginStatus SomeException
   deriving stock (Generic)
@@ -100,7 +100,7 @@ data RetrieveTokenError
   | FailToParseToken String
   deriving stock (Generic)
 
-data LoginIdExtractionError = LoginIdNotFound
+data LoginTokenExtractionError = LoginTokenNotFound
   deriving stock (Generic)
 
 newtype AuthSessionEnv = AuthSessionEnv
@@ -161,12 +161,12 @@ extractLoginIdRegex =
   makeRegex
     ([r|<input.+name="lt"[[:space:]]+value="([^"]+)"|] :: Text)
 
-extractLoginId ::
+extractLoginToken ::
   Text ->
-  Either LoginIdExtractionError Text
-extractLoginId inp = do
+  Either LoginTokenExtractionError Text
+extractLoginToken inp = do
   matchResult :: MatchResult Text <-
-    maybeToEither LoginIdNotFound $
+    maybeToEither LoginTokenNotFound $
       matchM extractLoginIdRegex inp
 
   case mrSubList matchResult of
@@ -291,16 +291,16 @@ login retrieveTwoFactorAuthenticationCode username password = do
       withError (withGenericHttpClientError (LoginError . FailToLoadLoginPage)) $
         performRequestWithCookies getLoginPageReq
 
-  loginId <-
+  loginToken <-
     liftEither $
-      first (LoginError . FailToExtractLoginId) $
-        extractLoginId loginPage
+      first (LoginError . FailToExtractLoginToken) $
+        extractLoginToken loginPage
 
-  require2FA <- doLogin loginId Nothing
+  require2FA <- doLogin loginToken Nothing
 
   when require2FA $ whileM $ do
     code <- lift retrieveTwoFactorAuthenticationCode
-    doLogin loginId $ Just code
+    doLogin loginToken $ Just code
 
   checkLoginStatus
   where
@@ -373,14 +373,14 @@ retrieveToken = do
 fuckedUpDes :: [Text] -> Text -> ByteString
 fuckedUpDes passwords dat = foldl' encPass (textToBytes dat) passwords
   where
-    padData :: Int -> ByteString -> ByteString
-    padData chunkSize bytes =
+    padBytes :: Int -> ByteString -> ByteString
+    padBytes chunkSize bytes =
       case BS.length bytes `mod` chunkSize of
         0 -> bytes
         m -> bytes <> BS.replicate (chunkSize - m) 0
 
     textToBytes :: Text -> ByteString
-    textToBytes = padData 8 . encodeUtf16BE
+    textToBytes = padBytes 8 . encodeUtf16BE
 
     chunksOfBS :: Int -> ByteString -> [ByteString]
     chunksOfBS chunkSize bs
@@ -390,10 +390,10 @@ fuckedUpDes passwords dat = foldl' encPass (textToBytes dat) passwords
            in c : chunksOfBS chunkSize bs'
 
     encPass :: ByteString -> Text -> ByteString
-    encPass dat' password =
+    encPass bytes password =
       let passwordBytes = textToBytes password
           passwordByteGroups = chunksOfBS 8 passwordBytes
-          op dat'' p =
+          op bytes' p =
             let c :: DES = throwCryptoError $ cipherInit p
-             in ecbEncrypt c $ padData 8 dat''
-       in foldl' op dat' passwordByteGroups
+             in ecbEncrypt c $ padBytes 8 bytes'
+       in foldl' op bytes passwordByteGroups
