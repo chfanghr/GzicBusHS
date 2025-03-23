@@ -99,7 +99,7 @@ retrieveQRLoginToken stateUUID = do
       (decodeUtf8 . responseBody)
       $ withError (withGenericHttpClientError (QRLoginError . FailToCheckQrCodeScan))
       $ performRequestWithCookies
-      $ mkQRScanCheckRequest stateUUID
+      $ mkQRScanCheckReq stateUUID
 
   logDebugN $ "qr scan check response: " <> resp
 
@@ -118,7 +118,7 @@ loginWithToken token = do
   void $
     withError (withGenericHttpClientError (QRLoginError . FailToLoginWithToken)) $
       performRequestWithCookies $
-        mkQRLoginWithTokenRequest token
+        mkQRLoginWithTokenReq token
 
 mkQRCodeLoginUrl :: UUID -> URI
 mkQRCodeLoginUrl stateUUID =
@@ -149,8 +149,8 @@ mkQRScanCheckURL stateUUID =
           }
    in uri
 
-mkQRScanCheckRequest :: UUID -> Request
-mkQRScanCheckRequest = m . Unsafe.fromJust . requestFromURI . mkQRScanCheckURL
+mkQRScanCheckReq :: UUID -> Request
+mkQRScanCheckReq = m . Unsafe.fromJust . requestFromURI . mkQRScanCheckURL
   where
     m req =
       req
@@ -172,8 +172,8 @@ mkQRLoginWithTokenURL token =
           }
    in uri
 
-mkQRLoginWithTokenRequest :: Text -> Request
-mkQRLoginWithTokenRequest = m . Unsafe.fromJust . requestFromURI . mkQRLoginWithTokenURL
+mkQRLoginWithTokenReq :: Text -> Request
+mkQRLoginWithTokenReq = m . Unsafe.fromJust . requestFromURI . mkQRLoginWithTokenURL
   where
     m req =
       req
