@@ -12,7 +12,6 @@ import Data.Either.Extra (maybeToEither)
 import Data.Time (NominalDiffTime, diffUTCTime)
 import Data.Time.Clock (getCurrentTime)
 import Data.UUID (UUID)
-import Data.UUID.V4 qualified as UUIDV4
 import GzicBusHS.Auth.Errors (
   QRLoginError (
     FailToCheckQrCodeScan,
@@ -26,7 +25,7 @@ import GzicBusHS.Auth.Errors (
  )
 import GzicBusHS.Auth.Session (Session)
 import GzicBusHS.Auth.Token (checkLoginStatus)
-import GzicBusHS.Auth.Utils (performRequestWithCookies, retryWithErrorFilter)
+import GzicBusHS.Auth.Utils (genFuckedUpTimeBasedV4UUID, performRequestWithCookies, retryWithErrorFilter)
 import Network.HTTP.Client (
   Request (checkResponse, method),
   Response (responseBody),
@@ -54,7 +53,7 @@ login ::
 login presentQR maybeValidDuration = do
   startingTime <- liftIO getCurrentTime
 
-  stateUUID <- liftIO UUIDV4.nextRandom
+  stateUUID <- liftIO $ genFuckedUpTimeBasedV4UUID startingTime
 
   let qrURI = mkQRCodeLoginUrl stateUUID
   logDebugN $ "QR URI: " <> show qrURI

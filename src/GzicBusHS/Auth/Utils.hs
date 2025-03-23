@@ -3,6 +3,7 @@ module GzicBusHS.Auth.Utils (
   performRequest,
   fuckedUpDes,
   retryWithErrorFilter,
+  genFuckedUpTimeBasedV4UUID,
 ) where
 
 import Control.Exception (catch)
@@ -11,11 +12,15 @@ import Control.Monad.Logger (MonadLogger, logWarnN)
 import Crypto.Cipher.DES (DES)
 import Crypto.Cipher.Types (BlockCipher (ecbEncrypt), Cipher (cipherInit))
 import Crypto.Error (throwCryptoError)
+import Data.Bits (Bits ((.&.), (.|.)))
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as LBS
 import Data.Maybe (fromJust)
 import Data.Text.Encoding (encodeUtf16BE)
-import Data.Time (getCurrentTime)
+import Data.Time (UTCTime, getCurrentTime, nominalDiffTimeToSeconds)
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
+import Data.UUID (UUID)
+import Data.UUID qualified as UUID
 import GzicBusHS.Auth.Errors (SessionError (..))
 import GzicBusHS.Auth.Session (Session (Session))
 import Network.HTTP.Client (
@@ -26,8 +31,11 @@ import Network.HTTP.Client (
   updateCookieJar,
  )
 import Network.HTTP.Types (hUserAgent)
-import Optics (ViewableOptic (gview), guse)
-import Optics.State.Operators ((.=))
+import Optics (Field1 (_1), Field2 (_2), ViewableOptic (gview), guse)
+import Optics.State.Operators ((%%=), (.=), (<<%=))
+import Relude.Unsafe ((!!))
+import Relude.Unsafe qualified as Unsafe
+import System.Random (RandomGen (genWord64R), StdGen, newStdGen)
 
 userAgent :: Text
 userAgent = "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.2 (KHTML, like Gecko) Chrome/22.0.1216.0 Safari/537.2"
@@ -125,3 +133,46 @@ retryWithErrorFilter f a = catchError a $ \e -> do
   if f e
     then retryWithErrorFilter f a
     else throwError e
+
+genFuckedUpTimeBasedV4UUID :: UTCTime -> IO UUID
+genFuckedUpTimeBasedV4UUID currentTime = runGen <$> newStdGen
+  where
+    millisSinceEpoch :: UTCTime -> Word64
+    millisSinceEpoch =
+      floor
+        . (* 1e3)
+        . nominalDiffTimeToSeconds
+        . utcTimeToPOSIXSeconds
+
+    ub :: Word64
+    ub = 2 ^ (60 :: Int)
+
+    genChar :: Char -> State (Word64, StdGen) Char
+    genChar '-' = pure '-'
+    genChar '4' = pure '4'
+    genChar ch = do
+      d <- _1 <<%= (`div` 16)
+      s <- _2 %%= genWord64R ub
+
+      let r = (d + ((s * 16) `div` ub)) `mod` 16
+
+      pure $ case ch of
+        'x' -> hexAlphabet !! fromIntegral r
+        'y' -> hexAlphabet !! fromIntegral (r .&. 0x3 .|. 0x8)
+        _ -> error $ "bad character in uuid template: " <> toText uuidTemplate
+
+    genUUID :: State (Word64, StdGen) [Char]
+    genUUID = traverse genChar uuidTemplate
+
+    uuidTemplate :: [Char]
+    uuidTemplate = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx"
+
+    hexAlphabet :: [Char]
+    hexAlphabet = ['0' .. '9'] ++ ['a' .. 'f']
+
+    runGen :: StdGen -> UUID
+    runGen rng =
+      let currentTimestamp = millisSinceEpoch currentTime
+          uuidStr = evalState genUUID (currentTimestamp, rng)
+          uuid = Unsafe.fromJust $ UUID.fromString uuidStr
+       in uuid

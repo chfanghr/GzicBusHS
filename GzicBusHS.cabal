@@ -71,6 +71,7 @@ library
     , http-types
     , monad-logger
     , network-uri
+    , random
     , raw-strings-qq
     , regex-tdfa
     , text
