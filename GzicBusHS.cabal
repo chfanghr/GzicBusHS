@@ -57,6 +57,7 @@ library
   exposed-modules:
     GzicBusHS.Auth.Errors
     GzicBusHS.Auth.PasswordLogin
+    GzicBusHS.Auth.QRLogin
     GzicBusHS.Auth.Session
     GzicBusHS.Auth.Token
     GzicBusHS.Auth.Utils
@@ -74,6 +75,7 @@ library
     , regex-tdfa
     , text
     , time
+    , uuid
 
 executable GzicBusHS
   import:         shared

@@ -1,19 +1,30 @@
 module GzicBusHS.Auth.Utils (
   performRequestWithCookies,
+  performRequest,
   fuckedUpDes,
+  retryWithErrorFilter,
 ) where
 
 import Control.Exception (catch)
+import Control.Monad.Error.Class (MonadError (catchError, throwError))
+import Control.Monad.Logger (MonadLogger, logWarnN)
 import Crypto.Cipher.DES (DES)
 import Crypto.Cipher.Types (BlockCipher (ecbEncrypt), Cipher (cipherInit))
 import Crypto.Error (throwCryptoError)
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as LBS
+import Data.Maybe (fromJust)
 import Data.Text.Encoding (encodeUtf16BE)
 import Data.Time (getCurrentTime)
-import GzicBusHS.Auth.Errors (SessionError (GenericHttpClientError))
+import GzicBusHS.Auth.Errors (SessionError (..))
 import GzicBusHS.Auth.Session (Session (Session))
-import Network.HTTP.Client (Request (cookieJar, requestHeaders), Response, httpLbs, updateCookieJar)
+import Network.HTTP.Client (
+  CookieJar,
+  Request (cookieJar, requestHeaders),
+  Response,
+  httpLbs,
+  updateCookieJar,
+ )
 import Network.HTTP.Types (hUserAgent)
 import Optics (ViewableOptic (gview), guse)
 import Optics.State.Operators ((.=))
@@ -29,14 +40,29 @@ performRequestWithCookies ::
 performRequestWithCookies req =
   do
     cookies <- guse #cookies
+    (cookies', resp') <- performRequestWithCookies' (Just cookies) req
+    #cookies .= cookies'
+
+    pure resp'
+
+performRequestWithCookies' ::
+  forall (m :: Type -> Type).
+  (MonadIO m) =>
+  Maybe CookieJar ->
+  Request ->
+  Session m (CookieJar, Response LBS.ByteString)
+performRequestWithCookies' maybePrevCookies req =
+  do
     manager <- gview #connectionManager
 
     let headers = requestHeaders req
         headers' = (hUserAgent, encodeUtf8 userAgent) : headers
 
+        prevCookies = fromJust mempty maybePrevCookies
+
         req' =
           req
-            { cookieJar = Just cookies
+            { cookieJar = Just prevCookies
             , requestHeaders = headers'
             }
 
@@ -49,10 +75,14 @@ performRequestWithCookies req =
               (\(e :: SomeException) -> pure $ Left $ GenericHttpClientError e)
 
     now <- liftIO getCurrentTime
-    let (cookies', resp') = updateCookieJar resp req' now cookies
-    #cookies .= cookies'
+    pure $ updateCookieJar resp req' now prevCookies
 
-    pure resp'
+performRequest ::
+  forall (m :: Type -> Type).
+  (MonadIO m) =>
+  Request ->
+  Session m (Response LBS.ByteString)
+performRequest = fmap snd . performRequestWithCookies' Nothing
 
 fuckedUpDes :: [Text] -> Text -> ByteString
 fuckedUpDes passwords dat = foldl' encPass (textToBytes dat) passwords
@@ -81,3 +111,17 @@ fuckedUpDes passwords dat = foldl' encPass (textToBytes dat) passwords
             let c :: DES = throwCryptoError $ cipherInit p
              in ecbEncrypt c $ padBytes 8 bytes'
        in foldl' op bytes passwordByteGroups
+
+retryWithErrorFilter ::
+  ( MonadLogger (Session m)
+  , HasCallStack
+  , Monad m
+  ) =>
+  (SessionError -> Bool) ->
+  Session m a ->
+  Session m a
+retryWithErrorFilter f a = catchError a $ \e -> do
+  logWarnN $ "error encountered: " <> show e
+  if f e
+    then retryWithErrorFilter f a
+    else throwError e

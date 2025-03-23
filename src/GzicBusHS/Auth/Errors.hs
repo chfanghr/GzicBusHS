@@ -1,16 +1,20 @@
 module GzicBusHS.Auth.Errors (
   SessionError (..),
   withGenericHttpClientError,
-  LoginError (..),
+  PasswordLoginError (..),
+  QRLoginError (..),
   RetrieveTokenError (..),
-  LoginTokenExtractionError (..),
+  PasswordLoginTokenExtractionError (..),
+  QRLoginTokenExtractionError (..),
 ) where
 
 -- TODO(chfanghr): Better Show instances
 
 data SessionError
-  = LoginError LoginError
+  = PasswordLoginError PasswordLoginError
+  | QRLoginError QRLoginError
   | RetrieveTokenError RetrieveTokenError
+  | NotLoggedIn SomeException
   | GenericHttpClientError SomeException
   deriving stock (Generic, Show)
 
@@ -21,11 +25,17 @@ withGenericHttpClientError ::
 withGenericHttpClientError f (GenericHttpClientError e) = f e
 withGenericHttpClientError _ e = e
 
-data LoginError
+data PasswordLoginError
   = FailToLoadLoginPage SomeException
-  | FailToExtractLoginToken LoginTokenExtractionError
+  | FailToExtractLoginToken PasswordLoginTokenExtractionError
   | FailToSendLoginRequest SomeException
-  | FailToCheckLoginStatus SomeException
+  deriving stock (Generic, Show)
+
+data QRLoginError
+  = FailToCheckQrCodeScan SomeException
+  | FailToExtractQRLoginToken QRLoginTokenExtractionError
+  | FailToLoginWithToken SomeException
+  | QRLoginTimeout
   deriving stock (Generic, Show)
 
 data RetrieveTokenError
@@ -34,5 +44,8 @@ data RetrieveTokenError
   | FailToParseToken Text
   deriving stock (Generic, Show)
 
-data LoginTokenExtractionError = LoginTokenNotFound
+data PasswordLoginTokenExtractionError = PasswordLoginTokenNotFound
+  deriving stock (Generic, Show)
+
+data QRLoginTokenExtractionError = QRLoginTokenNotFound
   deriving stock (Generic, Show)

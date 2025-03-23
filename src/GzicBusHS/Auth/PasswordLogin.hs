@@ -5,7 +5,6 @@
 
 module GzicBusHS.Auth.PasswordLogin (
   login,
-  checkLoginStatus,
 ) where
 
 import Control.Monad.Error.Class (liftEither, withError)
@@ -20,19 +19,22 @@ import Data.ByteString.Base16 (encodeBase16)
 import Data.Either.Extra (maybeToEither)
 import Data.Text qualified as T
 import GzicBusHS.Auth.Errors (
-  LoginError (
-    FailToCheckLoginStatus,
+  PasswordLoginError (
     FailToExtractLoginToken,
     FailToLoadLoginPage,
     FailToSendLoginRequest
   ),
-  LoginTokenExtractionError (LoginTokenNotFound),
-  SessionError (LoginError),
+  PasswordLoginTokenExtractionError (PasswordLoginTokenNotFound),
+  SessionError (PasswordLoginError),
   withGenericHttpClientError,
  )
 import GzicBusHS.Auth.Session (Session)
-import GzicBusHS.Auth.Token (postTokenReq)
-import GzicBusHS.Auth.Utils (fuckedUpDes, performRequestWithCookies)
+import GzicBusHS.Auth.Token (checkLoginStatus)
+import GzicBusHS.Auth.Utils (
+  fuckedUpDes,
+  performRequest,
+  performRequestWithCookies,
+ )
 import Network.HTTP.Client (
   Request (checkResponse, method, requestBody),
   RequestBody (RequestBodyLBS),
@@ -46,7 +48,12 @@ import Optics ((^.))
 import Optics.TH (makeFieldLabelsNoPrefix)
 import Relude.Unsafe qualified as Unsafe
 import Text.RawString.QQ (r)
-import Text.Regex.TDFA (MatchResult (mrSubList), Regex, RegexContext (matchM), RegexMaker (makeRegex))
+import Text.Regex.TDFA (
+  MatchResult (mrSubList),
+  Regex,
+  RegexContext (matchM),
+  RegexMaker (makeRegex),
+ )
 
 loginPageURL :: URI
 loginPageURL = Unsafe.fromJust $ parseURI "https://sso.scut.edu.cn/cas/login"
@@ -123,15 +130,6 @@ mkPostLoginReq body =
     , requestBody = RequestBodyLBS $ A.encode body
     }
 
-checkLoginStatus ::
-  forall (m :: Type -> Type).
-  (MonadIO m, HasCallStack) =>
-  Session m ()
-checkLoginStatus = do
-  void $
-    withError (withGenericHttpClientError (LoginError . FailToCheckLoginStatus)) $
-      performRequestWithCookies postTokenReq
-
 login ::
   forall (m :: Type -> Type).
   (MonadIO m, HasCallStack) =>
@@ -144,20 +142,21 @@ login retrieveTwoFactorAuthenticationCode username password = do
 
   loginPage :: Text <-
     fmap (decodeUtf8 . responseBody) $
-      withError (withGenericHttpClientError (LoginError . FailToLoadLoginPage)) $
-        performRequestWithCookies getLoginPageReq
+      withError (withGenericHttpClientError (PasswordLoginError . FailToLoadLoginPage)) $
+        performRequest getLoginPageReq
 
   logDebugN $ "login page: " <> loginPage
 
   loginToken <-
     liftEither $
-      first (LoginError . FailToExtractLoginToken) $
-        extractLoginToken loginPage
+      first (PasswordLoginError . FailToExtractLoginToken) $
+        extractPasswordLoginToken loginPage
 
   logDebugN $ "login token: " <> loginToken
 
   require2FA <- doLogin loginToken Nothing
 
+  -- TODO(chfanghr): Retry limit
   when require2FA $ whileM $ do
     code <- lift retrieveTwoFactorAuthenticationCode
     doLogin loginToken $ Just code
@@ -166,7 +165,7 @@ login retrieveTwoFactorAuthenticationCode username password = do
   where
     doLogin :: (HasCallStack) => Text -> Maybe Text -> Session m Bool
     doLogin loginId twoFactorAuthenticationCode = do
-      logDebugN "attempt to login"
+      logDebugN "attempting to login"
       logDebugN $ "with 2fa code? " <> show (isJust twoFactorAuthenticationCode)
 
       let loginParams =
@@ -184,7 +183,7 @@ login retrieveTwoFactorAuthenticationCode username password = do
       resp :: Text <-
         fmap
           (decodeUtf8 . responseBody)
-          $ withError (withGenericHttpClientError (LoginError . FailToSendLoginRequest))
+          $ withError (withGenericHttpClientError (PasswordLoginError . FailToSendLoginRequest))
           $ performRequestWithCookies
           $ mkPostLoginReq loginBody
 
@@ -192,18 +191,18 @@ login retrieveTwoFactorAuthenticationCode username password = do
 
       pure $ "PM1" `T.isInfixOf` resp
 
-extractLoginIdRegex :: Regex
-extractLoginIdRegex = makeRegex ([r|<input.+name="lt"[[:space:]]+value="([^"]+)"|] :: Text)
+extractPasswordLoginTokenRegex :: Regex
+extractPasswordLoginTokenRegex = makeRegex ([r|<input.+name="lt"[[:space:]]+value="([^"]+)"|] :: Text)
 
-extractLoginToken ::
+extractPasswordLoginToken ::
   (HasCallStack) =>
   Text ->
-  Either LoginTokenExtractionError Text
-extractLoginToken inp = do
+  Either PasswordLoginTokenExtractionError Text
+extractPasswordLoginToken inp = do
   matchResult :: MatchResult Text <-
-    maybeToEither LoginTokenNotFound $
-      matchM extractLoginIdRegex inp
+    maybeToEither PasswordLoginTokenNotFound $
+      matchM extractPasswordLoginTokenRegex inp
 
   case mrSubList matchResult of
     [val] -> Right val
-    _ -> error "unreachable"
+    xs -> error $ "expected one capture group, got: " <> show xs

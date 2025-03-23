@@ -1,16 +1,31 @@
 module GzicBusHS.Auth.Token (
   retrieveToken,
   postTokenReq,
+  checkLoginStatus,
 ) where
 
 import Control.Monad.Error.Class (liftEither, withError)
+import Control.Monad.Logger (logDebugN)
 import Data.Aeson ((.:))
 import Data.Aeson qualified as A
 import Data.Aeson.Types qualified as A
-import GzicBusHS.Auth.Errors (RetrieveTokenError (FailToParseToken, FailToSendGetTokenRequest, FailToSendPostTokenRequest), SessionError (RetrieveTokenError), withGenericHttpClientError)
+import GzicBusHS.Auth.Errors (
+  RetrieveTokenError (
+    FailToParseToken,
+    FailToSendGetTokenRequest,
+    FailToSendPostTokenRequest
+  ),
+  SessionError (NotLoggedIn, RetrieveTokenError),
+  withGenericHttpClientError,
+ )
 import GzicBusHS.Auth.Session (Session)
 import GzicBusHS.Auth.Utils (performRequestWithCookies)
-import Network.HTTP.Client (Request (checkResponse, method), Response (responseBody), requestFromURI, throwErrorStatusCodes)
+import Network.HTTP.Client (
+  Request (checkResponse, method),
+  Response (responseBody),
+  requestFromURI,
+  throwErrorStatusCodes,
+ )
 import Network.HTTP.Types (methodPost)
 import Network.HTTP.Types.Method (methodGet)
 import Network.URI (URI, parseURI)
@@ -44,9 +59,13 @@ retrieveToken ::
   (MonadIO m, HasCallStack) =>
   Session m Text
 retrieveToken = do
+  logDebugN "post token"
+
   void $
     withError (withGenericHttpClientError (RetrieveTokenError . FailToSendPostTokenRequest)) $
       performRequestWithCookies postTokenReq
+
+  logDebugN "get token"
 
   respBS <-
     fmap responseBody $
@@ -56,3 +75,14 @@ retrieveToken = do
   liftEither $
     first (RetrieveTokenError . FailToParseToken . toText) $
       A.eitherDecode respBS >>= A.parseEither parseGetTokenResponse
+
+checkLoginStatus ::
+  forall (m :: Type -> Type).
+  (MonadIO m, HasCallStack) =>
+  Session m ()
+checkLoginStatus = do
+  logDebugN "checking logging status by making post req to token"
+
+  void $
+    withError (withGenericHttpClientError NotLoggedIn) $
+      performRequestWithCookies postTokenReq
