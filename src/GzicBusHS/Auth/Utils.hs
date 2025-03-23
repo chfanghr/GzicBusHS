@@ -157,22 +157,22 @@ genFuckedUpTimeBasedV4UUID currentTime = runGen <$> newStdGen
       let r = (d + ((s * 16) `div` ub)) `mod` 16
 
       pure $ case ch of
-        'x' -> hexAlphabet !! fromIntegral r
-        'y' -> hexAlphabet !! fromIntegral (r .&. 0x3 .|. 0x8)
+        'x' -> hexDigits !! fromIntegral r
+        'y' -> hexDigits !! fromIntegral (r .&. 0x3 .|. 0x8)
         _ -> error $ "bad character in uuid template: " <> toText uuidTemplate
 
-    genUUID :: State (Word64, StdGen) [Char]
-    genUUID = traverse genChar uuidTemplate
+    genUUIDStr :: State (Word64, StdGen) [Char]
+    genUUIDStr = traverse genChar uuidTemplate
 
     uuidTemplate :: [Char]
     uuidTemplate = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx"
 
-    hexAlphabet :: [Char]
-    hexAlphabet = ['0' .. '9'] ++ ['a' .. 'f']
+    hexDigits :: [Char]
+    hexDigits = ['0' .. '9'] ++ ['a' .. 'f']
 
     runGen :: StdGen -> UUID
     runGen rng =
       let currentTimestamp = millisSinceEpoch currentTime
-          uuidStr = evalState genUUID (currentTimestamp, rng)
+          uuidStr = evalState genUUIDStr (currentTimestamp, rng)
           uuid = Unsafe.fromJust $ UUID.fromString uuidStr
        in uuid
