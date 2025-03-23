@@ -25,7 +25,11 @@ import GzicBusHS.Auth.Errors (
  )
 import GzicBusHS.Auth.Session (Session)
 import GzicBusHS.Auth.Token (checkLoginStatus)
-import GzicBusHS.Auth.Utils (genFuckedUpTimeBasedV4UUID, performRequestWithCookies, retryWithErrorFilter)
+import GzicBusHS.Auth.Utils (
+  genFuckedUpTimeBasedV4UUID,
+  performRequestWithCookies,
+  retryWithErrorFilter,
+ )
 import Network.HTTP.Client (
   Request (checkResponse, method),
   Response (responseBody),
