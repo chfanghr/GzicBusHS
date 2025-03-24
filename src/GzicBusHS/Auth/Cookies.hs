@@ -16,7 +16,12 @@ import Data.Aeson qualified as A
 import Data.Base16.Types (extractBase16)
 import Data.ByteString.Base16 (decodeBase16Untyped, encodeBase16)
 import Data.Time (UTCTime)
-import Network.HTTP.Client (Cookie (..), CookieJar, createCookieJar, destroyCookieJar)
+import Network.HTTP.Client (
+  Cookie (..),
+  CookieJar,
+  createCookieJar,
+  destroyCookieJar,
+ )
 
 newtype PersisitentByteString = PersisitentByteString ByteString
 

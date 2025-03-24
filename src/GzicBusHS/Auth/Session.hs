@@ -23,7 +23,11 @@ import Control.Monad.Logger (
 import Data.Aeson (KeyValue ((.=)), (.:))
 import Data.Aeson qualified as A
 import Data.Aeson.Types qualified as A
-import GzicBusHS.Auth.Cookies (PersistentCookieJar, mkPersistentCookieJar, unPersistentCookieJar)
+import GzicBusHS.Auth.Cookies (
+  PersistentCookieJar,
+  mkPersistentCookieJar,
+  unPersistentCookieJar,
+ )
 import GzicBusHS.Auth.Errors (SessionError)
 import Network.HTTP.Client (CookieJar, Manager, newManager)
 import Network.HTTP.Client.TLS (tlsManagerSettings)
@@ -87,9 +91,9 @@ emptySessionState = SessionState mempty
 -- NOTE(chfanghr): We serialize cookies via PersistentCookieJar and this makes it
 -- impossible to implement a lawful pair of From/ToJSON instances for SessionState.
 -- We do guarantee that:
---   sessionStateToJson (fromRight (sessionSateFromJSON jsonValue)) == jsonValue
-sessionStateToJson :: SessionState -> A.Value
-sessionStateToJson s =
+--   sessionStateToJSON (fromRight (sessionSateFromJSON jsonValue)) == jsonValue
+sessionStateToJSON :: SessionState -> A.Value
+sessionStateToJSON s =
   A.object
     [ "cookies" .= mkPersistentCookieJar (s ^. #cookies)
     ]
@@ -107,7 +111,7 @@ saveSessionSate ::
   m ()
 saveSessionSate p s = do
   p' <- liftIO $ decodeFS p
-  writeFileLBS p' $ A.encode $ sessionStateToJson s
+  writeFileLBS p' $ A.encode $ sessionStateToJSON s
 
 loadSessionState ::
   forall (m :: Type -> Type).
