@@ -50,6 +50,7 @@ common shared
     , relude        >=1.0
     , shower
     , text
+    , time
     , with-utf8
 
   default-language:   GHC2021
@@ -75,7 +76,6 @@ library
     , random
     , raw-strings-qq
     , regex-tdfa
-    , time
     , uuid
 
 executable GzicBusHS

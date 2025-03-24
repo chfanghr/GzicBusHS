@@ -3,6 +3,7 @@ module Main (main) where
 import Codec.QRCode qualified as QRCode
 import Control.Monad.Logger (LogLevel (LevelDebug))
 import Data.Text.Lazy.Builder qualified as TBuilder
+import Data.Time (NominalDiffTime, secondsToNominalDiffTime)
 import GzicBusHS.Auth.QRLogin qualified as QRLogin
 import GzicBusHS.Auth.Session qualified as Session
 import Main.Utf8 qualified as Utf8
@@ -13,12 +14,21 @@ main :: (HasCallStack) => IO ()
 main = Utf8.withUtf8 $ do
   env <- Session.newSessionEnv
 
-  void $
+  result <-
     Session.runSession
-      (QRLogin.login presentQRCode Nothing)
+      qrCodeLogin
       env
       Session.emptySessionState
       LevelDebug
+
+  whenLeft_ result $ \err ->
+    fail $ "unable to login with qr code" <> show err
+
+qrCodeLogin :: Session.Session IO ()
+qrCodeLogin = QRLogin.login presentQRCode $ Just qrCodeValidDuration
+
+qrCodeValidDuration :: NominalDiffTime
+qrCodeValidDuration = secondsToNominalDiffTime 120
 
 qrCodeOptions :: QRCode.QRCodeOptions
 qrCodeOptions = QRCode.defaultQRCodeOptions QRCode.L
