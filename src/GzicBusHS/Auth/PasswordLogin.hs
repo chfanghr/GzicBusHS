@@ -143,7 +143,7 @@ login retrieveTwoFactorAuthenticationCode username password = do
         you value your data security and privacy. The way your password is transferred
         and verified is unsafe, generally speaking vulnerable against MIMT attack.
         Please make sure you're NOT reusing your password on other sites if you
-        insist to use this login flow.
+        insist on using this login flow.
     |]
 
   logDebugN "loading login page"

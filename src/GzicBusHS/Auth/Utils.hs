@@ -34,7 +34,7 @@ import Optics (Field1 (_1), Field2 (_2), ViewableOptic (gview), guse)
 import Optics.State.Operators ((%%=), (.=), (<<%=))
 import Relude.Unsafe ((!!))
 import Relude.Unsafe qualified as Unsafe
-import System.Random (RandomGen (genWord64R), StdGen, newStdGen)
+import System.Random (RandomGen (genWord64R), StdGen)
 
 userAgent :: Text
 userAgent = "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.2 (KHTML, like Gecko) Chrome/22.0.1216.0 Safari/537.2"
@@ -133,8 +133,8 @@ retryWithErrorFilter f a = catchError a $ \e -> do
     then retryWithErrorFilter f a
     else throwError e
 
-genFuckedUpTimeBasedV4UUID :: UTCTime -> IO UUID
-genFuckedUpTimeBasedV4UUID currentTime = runGen <$> newStdGen
+genFuckedUpTimeBasedV4UUID :: UTCTime -> StdGen -> UUID
+genFuckedUpTimeBasedV4UUID currentTime = runGen
   where
     millisSinceEpoch :: UTCTime -> Word64
     millisSinceEpoch =

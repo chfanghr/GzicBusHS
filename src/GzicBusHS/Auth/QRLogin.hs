@@ -39,6 +39,7 @@ import Network.HTTP.Client (
 import Network.HTTP.Types (QueryItem, methodGet, renderQuery)
 import Network.URI (URI (uriFragment, uriQuery), parseURI)
 import Relude.Unsafe qualified as Unsafe
+import System.Random (newStdGen)
 import System.Time.Extra (sleep)
 import Text.RawString.QQ (r)
 import Text.Regex.TDFA (
@@ -55,9 +56,10 @@ login ::
   Maybe NominalDiffTime ->
   Session m ()
 login presentQR maybeValidDuration = do
+  rng <- newStdGen
   startingTime <- liftIO getCurrentTime
 
-  stateUUID <- liftIO $ genFuckedUpTimeBasedV4UUID startingTime
+  let stateUUID = genFuckedUpTimeBasedV4UUID startingTime rng
 
   let qrURI = mkQRCodeLoginUrl stateUUID
   logDebugN $ "QR URI: " <> show qrURI
