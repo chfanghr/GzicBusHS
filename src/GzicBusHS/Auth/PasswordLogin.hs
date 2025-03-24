@@ -9,7 +9,7 @@ module GzicBusHS.Auth.PasswordLogin (
 
 import Control.Monad.Error.Class (liftEither, withError)
 import Control.Monad.Extra (whileM)
-import Control.Monad.Logger (logDebugN)
+import Control.Monad.Logger (logDebugN, logWarnN)
 import Data.Aeson qualified as A
 import Data.Aeson.Key qualified as A
 import Data.Aeson.Text qualified as A
@@ -138,6 +138,14 @@ login ::
   Text ->
   Session m ()
 login retrieveTwoFactorAuthenticationCode username password = do
+  logWarnN
+    [r| WARN(chfanghr): I would strongly advise against using password login, if
+        you value your data security and privacy. The way your password is transferred
+        and verified is unsafe, generally speaking vulnerable against MIMT attack.
+        Please make sure you're NOT reusing your password on other sites if you
+        insist to use this login flow.
+    |]
+
   logDebugN "loading login page"
 
   loginPage :: Text <-
