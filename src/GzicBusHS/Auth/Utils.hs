@@ -4,6 +4,7 @@ module GzicBusHS.Auth.Utils (
   fuckedUpDes,
   retryWithErrorFilter,
   genFuckedUpTimeBasedV4UUID,
+  fromSingletonCaptureGroup,
 ) where
 
 import Control.Exception (catch)
@@ -35,6 +36,7 @@ import Optics.State.Operators ((%%=), (.=), (<<%=))
 import Relude.Unsafe ((!!))
 import Relude.Unsafe qualified as Unsafe
 import System.Random (RandomGen (genWord64R), StdGen)
+import Text.Regex.TDFA (MatchResult (mrSubList))
 
 userAgent :: Text
 userAgent = "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.2 (KHTML, like Gecko) Chrome/22.0.1216.0 Safari/537.2"
@@ -175,3 +177,9 @@ genFuckedUpTimeBasedV4UUID currentTime = runGen
           uuidStr = evalState genUUIDStr (currentTimestamp, rng)
           uuid = Unsafe.fromJust $ UUID.fromString uuidStr
        in uuid
+
+fromSingletonCaptureGroup :: MatchResult Text -> Text
+fromSingletonCaptureGroup =
+  mrSubList >>> \case
+    [x] -> x
+    xs -> error $ "expected one capture group, got: " <> show xs

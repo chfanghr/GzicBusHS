@@ -31,6 +31,7 @@ import GzicBusHS.Auth.Errors (
 import GzicBusHS.Auth.Session (Session)
 import GzicBusHS.Auth.Token (checkLoginStatus)
 import GzicBusHS.Auth.Utils (
+  fromSingletonCaptureGroup,
   fuckedUpDes,
   performRequest,
   performRequestWithCookies,
@@ -49,7 +50,7 @@ import Optics.TH (makeFieldLabelsNoPrefix)
 import Relude.Unsafe qualified as Unsafe
 import Text.RawString.QQ (r)
 import Text.Regex.TDFA (
-  MatchResult (mrSubList),
+  MatchResult,
   Regex,
   RegexContext (matchM),
   RegexMaker (makeRegex),
@@ -141,7 +142,7 @@ login retrieveTwoFactorAuthenticationCode username password = do
   logWarnN
     [r| WARN(chfanghr): I would strongly advise against using password login, if
         you value your data security and privacy. The way your password is transferred
-        and verified is unsafe, generally speaking vulnerable against MIMT attack.
+        and verified is unsafe, generally speaking vulnerable against MITM attack.
         Please make sure you're NOT reusing your password on other sites if you
         insist on using this login flow.
     |]
@@ -211,6 +212,4 @@ extractPasswordLoginToken inp = do
     maybeToEither PasswordLoginTokenNotFound $
       matchM extractPasswordLoginTokenRegex inp
 
-  case mrSubList matchResult of
-    [val] -> Right val
-    xs -> error $ "expected one capture group, got: " <> show xs
+  pure $ fromSingletonCaptureGroup matchResult

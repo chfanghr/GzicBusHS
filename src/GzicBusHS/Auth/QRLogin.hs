@@ -26,6 +26,7 @@ import GzicBusHS.Auth.Errors (
 import GzicBusHS.Auth.Session (Session)
 import GzicBusHS.Auth.Token (checkLoginStatus)
 import GzicBusHS.Auth.Utils (
+  fromSingletonCaptureGroup,
   genFuckedUpTimeBasedV4UUID,
   performRequestWithCookies,
   retryWithErrorFilter,
@@ -43,7 +44,7 @@ import System.Random (newStdGen)
 import System.Time.Extra (sleep)
 import Text.RawString.QQ (r)
 import Text.Regex.TDFA (
-  MatchResult (mrSubList),
+  MatchResult,
   Regex,
   RegexContext (matchM),
   RegexMaker (makeRegex),
@@ -62,7 +63,7 @@ login presentQR maybeValidDuration = do
   let stateUUID = genFuckedUpTimeBasedV4UUID startingTime rng
 
   let qrURI = mkQRCodeLoginUrl stateUUID
-  logDebugN $ "QR URI: " <> show qrURI
+  logDebugN $ "qr uri: " <> show qrURI
   lift $ presentQR qrURI
 
   -- TODO(chfanghr): Retry limit
@@ -194,6 +195,4 @@ extractQRLoginToken inp = do
     maybeToEither QRLoginTokenNotFound $
       matchM extractQRLoginTokenRegex inp
 
-  case mrSubList matchResult of
-    [val] -> Right val
-    xs -> error $ "expected one capture group, got: " <> show xs
+  pure $ fromSingletonCaptureGroup matchResult

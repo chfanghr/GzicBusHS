@@ -88,7 +88,7 @@ newSessionEnv =
 emptySessionState :: SessionState
 emptySessionState = SessionState mempty
 
--- NOTE(chfanghr): We serialize cookies via PersistentCookieJar and this makes it
+-- NOTE(chfanghr): We serialize cookies via PersistentCookieJar which makes it
 -- impossible to implement a lawful pair of From/ToJSON instances for SessionState.
 -- We do guarantee that:
 --   sessionStateToJSON (fromRight (sessionSateFromJSON jsonValue)) == jsonValue
