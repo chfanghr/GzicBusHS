@@ -34,7 +34,7 @@ qrCodeOptions = QRCode.defaultQRCodeOptions QRCode.L
 
 presentQRCode :: (HasCallStack) => URI -> IO ()
 presentQRCode uri = do
-  putTextLn $ encodeQRImageToText False $ encodeURIToQRImage uri
+  putTextLn $ encodeQRImageToText True $ encodeURIToQRImage uri
   hFlush stdout
 
 encodeURIToQRImage :: (HasCallStack) => URI -> QRCode.QRImage
@@ -63,14 +63,15 @@ encodeQRImageToText invertColor qr =
     builder :: TBuilder.Builder
     builder =
       foldMap
-        ( foldMap
-            ( mtimesDefault repeatSquare
-                . TBuilder.singleton
-                . ( \case
-                      True -> blackSquare
-                      False -> whiteSquare
-                  )
-                . xor invertColor
-            )
+        ( (<> TBuilder.singleton '\n')
+            . foldMap
+              ( mtimesDefault repeatSquare
+                  . TBuilder.singleton
+                  . ( \case
+                        True -> blackSquare
+                        False -> whiteSquare
+                    )
+                  . xor invertColor
+              )
         )
         bitmap
