@@ -5,6 +5,8 @@ module GzicBusHS.Auth (
   emptySessionState,
   newSessionEnv,
   runSession,
+  saveSessionSate,
+  loadSessionState,
   qrLogin,
   passwordLogin,
   checkLoginStatus,
@@ -33,8 +35,10 @@ import GzicBusHS.Auth.Session (
   SessionEnv,
   SessionState,
   emptySessionState,
+  loadSessionState,
   newSessionEnv,
   runSession,
+  saveSessionSate,
  )
 import GzicBusHS.Auth.Token (checkLoginStatus, retrieveToken)
 import Network.URI (URI)

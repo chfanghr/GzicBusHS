@@ -59,6 +59,7 @@ library
   import:          shared
   hs-source-dirs:  src
   other-modules:
+    GzicBusHS.Auth.Cookies
     GzicBusHS.Auth.Errors
     GzicBusHS.Auth.PasswordLogin
     GzicBusHS.Auth.QRLogin
@@ -66,7 +67,10 @@ library
     GzicBusHS.Auth.Token
     GzicBusHS.Auth.Utils
 
-  exposed-modules: GzicBusHS.Auth
+  exposed-modules:
+    GzicBusHS.Auth
+    GzicBusHS.Bus
+
   build-depends:
     , base16
     , crypton

@@ -8,6 +8,8 @@ module GzicBusHS.Auth.Session (
   newSessionEnv,
   emptySessionState,
   runSession,
+  saveSessionSate,
+  loadSessionState,
 ) where
 
 import Control.Monad.Error.Class (MonadError)
@@ -18,10 +20,16 @@ import Control.Monad.Logger (
   filterLogger,
   runStderrLoggingT,
  )
+import Data.Aeson (KeyValue ((.=)), (.:))
+import Data.Aeson qualified as A
+import Data.Aeson.Types qualified as A
+import GzicBusHS.Auth.Cookies (PersistentCookieJar, mkPersistentCookieJar, unPersistentCookieJar)
 import GzicBusHS.Auth.Errors (SessionError)
 import Network.HTTP.Client (CookieJar, Manager, newManager)
 import Network.HTTP.Client.TLS (tlsManagerSettings)
+import Optics ((^.))
 import Optics.TH (makeFieldLabelsNoPrefix)
+import System.OsPath (OsPath, decodeFS)
 
 newtype SessionEnv = SessionEnv
   { connectionManager :: Manager
@@ -73,10 +81,46 @@ newSessionEnv =
     liftIO $
       newManager tlsManagerSettings
 
--- TODO(chfanghr): Provide a way to persist/load SessionState
-
 emptySessionState :: SessionState
 emptySessionState = SessionState mempty
+
+-- NOTE(chfanghr): We serialize cookies via PersistentCookieJar and this makes it
+-- impossible to implement a lawful pair of From/ToJSON instances for SessionState.
+-- We do guarantee that:
+--   sessionStateToJson (fromRight (sessionSateFromJSON jsonValue)) == jsonValue
+sessionStateToJson :: SessionState -> A.Value
+sessionStateToJson s =
+  A.object
+    [ "cookies" .= mkPersistentCookieJar (s ^. #cookies)
+    ]
+
+sessionSateFromJSON :: A.Value -> A.Parser SessionState
+sessionSateFromJSON = A.withObject "SessionState" $ \obj -> do
+  cookies :: PersistentCookieJar <- obj .: "cookies"
+  pure $ SessionState $ unPersistentCookieJar cookies
+
+saveSessionSate ::
+  forall (m :: Type -> Type).
+  (MonadIO m) =>
+  OsPath ->
+  SessionState ->
+  m ()
+saveSessionSate p s = do
+  p' <- liftIO $ decodeFS p
+  writeFileLBS p' $ A.encode $ sessionStateToJson s
+
+loadSessionState ::
+  forall (m :: Type -> Type).
+  (MonadIO m, MonadFail m) =>
+  OsPath ->
+  m SessionState
+loadSessionState p = do
+  p' <- liftIO $ decodeFS p
+  bs <- readFileBS p'
+  either
+    (fail . ("unable to decode session state: " <>))
+    pure
+    $ A.eitherDecodeStrict' bs >>= A.parseEither sessionSateFromJSON
 
 runSession ::
   forall (m :: Type -> Type) (a :: Type).
@@ -85,11 +129,10 @@ runSession ::
   SessionEnv ->
   SessionState ->
   LogLevel ->
-  m (Either SessionError (a, SessionState))
+  m (Either SessionError a, SessionState)
 runSession (Session inner) env st lvl =
-  fmap (\(e, s') -> (,s') <$> e) $
-    runStderrLoggingT $
-      filterLogger (const (>= lvl)) $
-        usingStateT st $
-          usingReaderT env $
-            runExceptT inner
+  runStderrLoggingT $
+    filterLogger (const (>= lvl)) $
+      usingStateT st $
+        usingReaderT env $
+          runExceptT inner

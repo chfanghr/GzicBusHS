@@ -13,7 +13,7 @@ main :: (HasCallStack) => IO ()
 main = Utf8.withUtf8 $ do
   env <- Auth.newSessionEnv
 
-  result <-
+  (result, _) <-
     Auth.runSession
       qrCodeLogin
       env
@@ -21,7 +21,7 @@ main = Utf8.withUtf8 $ do
       LevelDebug
 
   whenLeft_ result $ \err ->
-    fail $ "unable to login with qr code" <> show err
+    fail $ "unable to login with qr code: " <> show err
 
 qrCodeLogin :: Auth.Session IO ()
 qrCodeLogin = Auth.qrLogin presentQRCode $ Just qrCodeValidDuration
