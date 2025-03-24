@@ -164,8 +164,7 @@ mkQRLoginWithTokenURL :: Text -> URI
 mkQRLoginWithTokenURL token =
   let baseURI = Unsafe.fromJust $ parseURI "https://sso.scut.edu.cn/cas/qRCode"
       query :: [QueryItem] =
-        [ -- FIXME(chfanghr): Is this utf8 or utf16
-          ("token", Just $ encodeUtf8 token)
+        [ ("token", Just $ encodeUtf8 token)
         , ("service", Just "https://life.gzic.scut.edu.cn/login/cas/")
         ]
       uri =
