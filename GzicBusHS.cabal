@@ -58,7 +58,7 @@ common shared
 library
   import:          shared
   hs-source-dirs:  src
-  exposed-modules:
+  other-modules:
     GzicBusHS.Auth.Errors
     GzicBusHS.Auth.PasswordLogin
     GzicBusHS.Auth.QRLogin
@@ -66,6 +66,7 @@ library
     GzicBusHS.Auth.Token
     GzicBusHS.Auth.Utils
 
+  exposed-modules: GzicBusHS.Auth
   build-depends:
     , base16
     , crypton

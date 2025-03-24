@@ -4,28 +4,27 @@ import Codec.QRCode qualified as QRCode
 import Control.Monad.Logger (LogLevel (LevelDebug))
 import Data.Text.Lazy.Builder qualified as TBuilder
 import Data.Time (NominalDiffTime, secondsToNominalDiffTime)
-import GzicBusHS.Auth.QRLogin qualified as QRLogin
-import GzicBusHS.Auth.Session qualified as Session
+import GzicBusHS.Auth qualified as Auth
 import Main.Utf8 qualified as Utf8
 import Network.URI (URI)
 import Relude.Unsafe qualified as Unsafe
 
 main :: (HasCallStack) => IO ()
 main = Utf8.withUtf8 $ do
-  env <- Session.newSessionEnv
+  env <- Auth.newSessionEnv
 
   result <-
-    Session.runSession
+    Auth.runSession
       qrCodeLogin
       env
-      Session.emptySessionState
+      Auth.emptySessionState
       LevelDebug
 
   whenLeft_ result $ \err ->
     fail $ "unable to login with qr code" <> show err
 
-qrCodeLogin :: Session.Session IO ()
-qrCodeLogin = QRLogin.login presentQRCode $ Just qrCodeValidDuration
+qrCodeLogin :: Auth.Session IO ()
+qrCodeLogin = Auth.qrLogin presentQRCode $ Just qrCodeValidDuration
 
 qrCodeValidDuration :: NominalDiffTime
 qrCodeValidDuration = secondsToNominalDiffTime 120
