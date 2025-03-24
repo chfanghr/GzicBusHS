@@ -42,11 +42,14 @@ common shared
     , data-default
     , directory
     , filepath
+    , monad-logger
     , mtl
+    , network-uri
     , optics
     , profunctors
     , relude        >=1.0
     , shower
+    , text
     , with-utf8
 
   default-language:   GHC2021
@@ -69,12 +72,9 @@ library
     , http-client
     , http-client-tls
     , http-types
-    , monad-logger
-    , network-uri
     , random
     , raw-strings-qq
     , regex-tdfa
-    , text
     , time
     , uuid
 
@@ -82,3 +82,7 @@ executable GzicBusHS
   import:         shared
   main-is:        Main.hs
   hs-source-dirs: bin
+  build-depends:
+    , brick
+    , GzicBusHS
+    , qrcode-core

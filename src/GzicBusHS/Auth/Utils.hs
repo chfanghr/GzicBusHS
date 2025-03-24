@@ -15,7 +15,6 @@ import Crypto.Error (throwCryptoError)
 import Data.Bits (Bits ((.&.), (.|.)))
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as LBS
-import Data.Maybe (fromJust)
 import Data.Text.Encoding (encodeUtf16BE)
 import Data.Time (UTCTime, getCurrentTime, nominalDiffTimeToSeconds)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
@@ -66,7 +65,7 @@ performRequestWithCookies' maybePrevCookies req =
     let headers = requestHeaders req
         headers' = (hUserAgent, encodeUtf8 userAgent) : headers
 
-        prevCookies = fromJust mempty maybePrevCookies
+        prevCookies = maybeToMonoid maybePrevCookies
 
         req' =
           req

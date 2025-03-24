@@ -11,7 +11,13 @@ module GzicBusHS.Auth.Session (
 ) where
 
 import Control.Monad.Error.Class (MonadError)
-import Control.Monad.Logger (LoggingT, MonadLogger, runStderrLoggingT)
+import Control.Monad.Logger (
+  LogLevel,
+  LoggingT,
+  MonadLogger,
+  filterLogger,
+  runStderrLoggingT,
+ )
 import GzicBusHS.Auth.Errors (SessionError)
 import Network.HTTP.Client (CookieJar, Manager, newManager)
 import Network.HTTP.Client.TLS (tlsManagerSettings)
@@ -78,10 +84,12 @@ runSession ::
   Session m a ->
   SessionEnv ->
   SessionState ->
+  LogLevel ->
   m (Either SessionError (a, SessionState))
-runSession (Session inner) env st =
+runSession (Session inner) env st lvl =
   fmap (\(e, s') -> (,s') <$> e) $
     runStderrLoggingT $
-      usingStateT st $
-        usingReaderT env $
-          runExceptT inner
+      filterLogger (const (>= lvl)) $
+        usingStateT st $
+          usingReaderT env $
+            runExceptT inner
