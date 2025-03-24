@@ -13,6 +13,7 @@
       projectRoot = builtins.toString (lib.fileset.toSource {
         inherit root;
         fileset = lib.fileset.unions [
+          (root + /bin)
           (root + /src)
           (root + /GzicBusHS.cabal)
           (root + /LICENSE)
