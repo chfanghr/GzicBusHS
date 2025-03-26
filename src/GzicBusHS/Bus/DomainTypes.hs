@@ -9,12 +9,14 @@ module GzicBusHS.Bus.DomainTypes (
   mkTimeHHMM,
   TicketInfo (..),
   BusInfo (..),
-  QueryBusesRequest (..),
-  QueryBusesResponse (..),
+  ListTicketsResponse (..),
+  QueryScheduleRequest (..),
+  QueryScheduleResponse (..),
   OneTicketPlease (..),
   BookTicketsRequest (..),
+  QueryTicketDetailsResponse (..),
   GenericResponseWrapper (..),
-  QueryTicketResponse (..),
+  IsAdditionalFieldInResponse,
 ) where
 
 import Data.Aeson ((.:), (.:?), (.=))
@@ -102,13 +104,6 @@ instance R.Read TimeHHMM where
       [h', m'] -> pure (h', m')
       _ -> fail "Invalid TimeHHMM: expected two words seperated by ':'"
     maybe (fail "Invalid TimeHHMM: time out of bound") pure $ mkTimeHHMM h m
-
-data TicketStatus
-  = AllReserved
-  | ReservedUnused
-  | Missed
-  | Unrated
-  deriving stock (Generic)
 
 data TicketInfo = TickInfo
   { id :: Int
@@ -199,7 +194,16 @@ instance A.ToJSON BusInfo where
 instance A.FromJSON BusInfo where
   parseJSON = A.withObject "BusInfo" busInfoFromJSONObject
 
-data QueryBusesRequest = SearchBusesRequest
+newtype ListTicketsResponse = ListTicketsResponse
+  { tickets :: [TicketInfo]
+  }
+  deriving stock (Generic, Show)
+  deriving newtype (A.FromJSON, A.ToJSON)
+
+instance IsAdditionalFieldInResponse ListTicketsResponse where
+  additionalFieldName = Just "list"
+
+data QueryScheduleRequest = QueryScheduleRequest
   { startDate :: DateYYMMDD
   , startTime :: TimeHHMM
   , startCampus :: Campus
@@ -209,7 +213,7 @@ data QueryBusesRequest = SearchBusesRequest
   }
   deriving stock (Generic, Show)
 
-instance A.ToJSON QueryBusesRequest where
+instance A.ToJSON QueryScheduleRequest where
   toJSON p =
     A.object
       [ "startDate" .= (p ^. #startDate)
@@ -220,9 +224,9 @@ instance A.ToJSON QueryBusesRequest where
       , "endCampus" .= (p ^. #endCampus)
       ]
 
-instance A.FromJSON QueryBusesRequest where
-  parseJSON = A.withObject "SearchBusesParams" $ \obj ->
-    SearchBusesRequest
+instance A.FromJSON QueryScheduleRequest where
+  parseJSON = A.withObject "QueryScheduleRequest" $ \obj ->
+    QueryScheduleRequest
       <$> obj .: "startDate"
       <*> obj .: "startHsTime"
       <*> obj .: "startCampus"
@@ -230,13 +234,13 @@ instance A.FromJSON QueryBusesRequest where
       <*> obj .: "endHsTime"
       <*> obj .: "endCampus"
 
-newtype QueryBusesResponse = SearchBusesResponse
-  { availableBuses :: [QueryBusesResponse]
+newtype QueryScheduleResponse = QueryScheduleResponse
+  { availableBuses :: [BusInfo]
   }
   deriving stock (Generic, Show)
   deriving newtype (A.FromJSON, A.ToJSON)
 
-instance IsResponseWithAdditionalField QueryBusesResponse where
+instance IsAdditionalFieldInResponse QueryScheduleResponse where
   additionalFieldName = Just "list"
 
 newtype OneTicketPlease = OneTicketPlease
@@ -270,13 +274,13 @@ newtype BookTicketsRequest = BookTicketsRequest
   deriving stock (Generic, Show)
   deriving newtype (A.FromJSON, A.ToJSON)
 
-newtype QueryTicketResponse = QueryTicketResponse
+newtype QueryTicketDetailsResponse = QueryTicketDetailsResponse
   { ticket :: TicketInfo
   }
   deriving stock (Generic, Show)
   deriving newtype (A.FromJSON, A.ToJSON)
 
-instance IsResponseWithAdditionalField QueryTicketResponse where
+instance IsAdditionalFieldInResponse QueryTicketDetailsResponse where
   additionalFieldName = Just "data"
 
 newtype QueryTicketsResponse = QueryTicketsResponse
@@ -285,24 +289,24 @@ newtype QueryTicketsResponse = QueryTicketsResponse
   deriving stock (Generic, Show)
   deriving newtype (A.FromJSON, A.ToJSON)
 
-instance IsResponseWithAdditionalField QueryTicketsResponse where
+instance IsAdditionalFieldInResponse QueryTicketsResponse where
   additionalFieldName = Just "list"
 
-instance IsResponseWithAdditionalField Void where
+instance IsAdditionalFieldInResponse Void where
   additionalFieldName = Nothing
 
-class IsResponseWithAdditionalField a where
+class IsAdditionalFieldInResponse a where
   additionalFieldName :: Maybe A.Key
 
 data GenericResponseWrapper (a :: Type) = GenericResponse
   { code :: Int
   , msg :: Text
-  , field :: Maybe a
+  , additionalField :: Maybe a
   }
   deriving stock (Generic, Show)
 
 instance
-  (A.ToJSON a, IsResponseWithAdditionalField a) =>
+  (A.ToJSON a, IsAdditionalFieldInResponse a) =>
   A.ToJSON (GenericResponseWrapper a)
   where
   toJSON o =
@@ -315,12 +319,12 @@ instance
         , maybeToMonoid
             ( do
                 k <- additionalFieldName @a
-                pure $ one $ k .= (o ^. #field)
+                pure $ one $ k .= (o ^. #additionalField)
             )
         ]
 
 instance
-  (A.FromJSON a, IsResponseWithAdditionalField a) =>
+  (A.FromJSON a, IsAdditionalFieldInResponse a) =>
   A.FromJSON (GenericResponseWrapper a)
   where
   parseJSON = A.withObject "GenericResponse" $ \obj ->
@@ -333,11 +337,11 @@ makeFieldLabelsNoPrefix ''DateYYMMDD
 makeFieldLabelsNoPrefix ''TimeHHMM
 makeFieldLabelsNoPrefix ''TicketInfo
 makeFieldLabelsNoPrefix ''BusInfo
-makeFieldLabelsNoPrefix ''QueryBusesRequest
-makeFieldLabelsNoPrefix ''QueryBusesResponse
+makeFieldLabelsNoPrefix ''QueryScheduleRequest
+makeFieldLabelsNoPrefix ''QueryScheduleResponse
 makeFieldLabelsNoPrefix ''OneTicketPlease
 makeFieldLabelsNoPrefix ''BookTicketsRequest
 makeFieldLabelsNoPrefix ''GenericResponseWrapper
-makeFieldLabelsNoPrefix ''QueryTicketResponse
+makeFieldLabelsNoPrefix ''QueryTicketDetailsResponse
 
 -- TODO(chfanghr): UTCTime -> Maybe (DateYYMMDD, TimeHHMM)

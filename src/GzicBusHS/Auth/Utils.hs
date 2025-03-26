@@ -135,7 +135,7 @@ retryWithErrorFilter f a = catchError a $ \e -> do
     then retryWithErrorFilter f a
     else throwError e
 
-genFuckedUpTimeBasedV4UUID :: UTCTime -> StdGen -> UUID
+genFuckedUpTimeBasedV4UUID :: (HasCallStack) => UTCTime -> StdGen -> UUID
 genFuckedUpTimeBasedV4UUID currentTime = runGen
   where
     millisSinceEpoch :: UTCTime -> Word64
@@ -148,7 +148,7 @@ genFuckedUpTimeBasedV4UUID currentTime = runGen
     ub :: Word64
     ub = 2 ^ (60 :: Int)
 
-    genChar :: Char -> State (Word64, StdGen) Char
+    genChar :: (HasCallStack) => Char -> State (Word64, StdGen) Char
     genChar '-' = pure '-'
     genChar '4' = pure '4'
     genChar ch = do
@@ -171,14 +171,14 @@ genFuckedUpTimeBasedV4UUID currentTime = runGen
     hexDigits :: [Char]
     hexDigits = ['0' .. '9'] ++ ['a' .. 'f']
 
-    runGen :: StdGen -> UUID
+    runGen :: (HasCallStack) => StdGen -> UUID
     runGen rng =
       let currentTimestamp = millisSinceEpoch currentTime
           uuidStr = evalState genUUIDStr (currentTimestamp, rng)
           uuid = Unsafe.fromJust $ UUID.fromString uuidStr
        in uuid
 
-fromSingletonCaptureGroup :: MatchResult Text -> Text
+fromSingletonCaptureGroup :: (HasCallStack) => MatchResult Text -> Text
 fromSingletonCaptureGroup =
   mrSubList >>> \case
     [x] -> x

@@ -66,11 +66,16 @@ library
     GzicBusHS.Auth.Session
     GzicBusHS.Auth.Token
     GzicBusHS.Auth.Utils
+    GzicBusHS.Bus.APIClient
     GzicBusHS.Bus.DomainTypes
 
-  exposed-modules: GzicBusHS.Auth
+  exposed-modules:
+    GzicBusHS.Auth
+    GzicBusHS.Bus
+
   build-depends:
     , base16
+    , composition-prelude
     , crypton
     , extra
     , http-client
