@@ -81,7 +81,7 @@ performRequestWithCookies' maybePrevCookies req =
           liftIO $
             catch
               (Right <$> httpLbs req' manager)
-              (\(e :: SomeException) -> pure $ Left $ GenericHttpClientError e)
+              (pure . Left . GenericHttpClientError)
 
     now <- liftIO getCurrentTime
     pure $ updateCookieJar resp req' now prevCookies

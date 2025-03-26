@@ -66,11 +66,9 @@ library
     GzicBusHS.Auth.Session
     GzicBusHS.Auth.Token
     GzicBusHS.Auth.Utils
+    GzicBusHS.Bus.DomainTypes
 
-  exposed-modules:
-    GzicBusHS.Auth
-    GzicBusHS.Bus
-
+  exposed-modules: GzicBusHS.Auth
   build-depends:
     , base16
     , crypton

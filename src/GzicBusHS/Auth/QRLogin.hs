@@ -59,10 +59,8 @@ login ::
 login presentQR maybeValidDuration = do
   rng <- newStdGen
   startingTime <- liftIO getCurrentTime
-
   let stateUUID = genFuckedUpTimeBasedV4UUID startingTime rng
-
-  let qrURI = mkQRCodeLoginUrl stateUUID
+      qrURI = mkQRCodeLoginUrl stateUUID
   logDebugN $ "qr uri: " <> show qrURI
   lift $ presentQR qrURI
 
