@@ -3,21 +3,8 @@ name:               GzicBusHS
 version:            0.1.0.0
 license:            MIT
 copyright:          2022 Connor Fang
-maintainer:         srid@srid.ca
+maintainer:         chfanghr@gmail.com
 author:             Connor Fang
-category:           Web
-homepage:           https://srid.ca/GzicBusHS
-
--- TODO: Before hackage release.
--- A short (one-line) description of the package.
-synopsis:           A template for Haskell projects using Nix
-
--- A longer description of the package.
--- description:
-
--- A URL where users can report bugs.
--- bug-reports:
-
 extra-source-files:
   LICENSE
   README.md
@@ -37,9 +24,12 @@ common shared
     DataKinds
     DerivingStrategies
     DerivingVia
+    DuplicateRecordFields
     LambdaCase
     MultiWayIf
+    NoFieldSelectors
     NoStarIsType
+    OverloadedLabels
     OverloadedStrings
     StrictData
     TypeFamilies
@@ -52,17 +42,55 @@ common shared
     , data-default
     , directory
     , filepath
+    , monad-logger
     , mtl
-    , optics-core
+    , network-uri
+    , optics
     , profunctors
     , relude        >=1.0
     , shower
+    , text
     , time
     , with-utf8
 
-  hs-source-dirs:     src
   default-language:   GHC2021
 
+library
+  import:          shared
+  hs-source-dirs:  src
+  other-modules:
+    GzicBusHS.Auth.Cookies
+    GzicBusHS.Auth.Errors
+    GzicBusHS.Auth.PasswordLogin
+    GzicBusHS.Auth.QRLogin
+    GzicBusHS.Auth.Session
+    GzicBusHS.Auth.Token
+    GzicBusHS.Auth.Utils
+    GzicBusHS.Bus.APIClient
+    GzicBusHS.Bus.DomainTypes
+
+  exposed-modules:
+    GzicBusHS.Auth
+    GzicBusHS.Bus
+
+  build-depends:
+    , base16
+    , composition-prelude
+    , crypton
+    , extra
+    , http-client
+    , http-client-tls
+    , http-types
+    , random
+    , raw-strings-qq
+    , regex-tdfa
+    , uuid
+
 executable GzicBusHS
-  import:  shared
-  main-is: Main.hs
+  import:         shared
+  main-is:        Main.hs
+  hs-source-dirs: bin
+  build-depends:
+    , brick
+    , GzicBusHS
+    , qrcode-core
